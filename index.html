@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>GS칼텍스 전력계통</title>
+  <style>
+    body{margin:0;font-family: Arial, sans-serif;background:#0b1220;color:#e2e8f0; }
+    #container { display:flex; height:100vh; }
+    #nav{width:260px;background:#111827;border-right:1px solid #1f2937;padding:14px; }
+    #nav h2 { font-size:15px; margin-top:0; }
+    .btn{display:block;width:100%;margin:6px 0;padding:9px 10px;background:#1f2937;color:#cbd5e1;border:none;border-radius:6px;cursor:pointer;transition:0.2s; }
+    .btn:hover{background:#334155;}
+    .btn.active{background:#2563eb;color:white;}
+    #nav .btn {display: block;width: 100%;padding: 10px 12px;text-align: left;background: none;border: none;color: #cbd5e1;cursor: pointer;}
+    #nav .btn:hover {background: #1e293b;}
+    #nav .btn.active {background: #1e293b;color: #38bdf8;font-weight: 600;border-left: 4px solid #38bdf8;}
+    #content {flex:1;display:flex;justify-content:center;align-items:flex-start;height:100%;}
+    html, body {height: 100%;margin: 0;}
+    #svg-area {width: 100%;height: 100%;}
+    svg{background:#0f172a;}
+    #app {display: flex;height: 100vh;}
+    .bus{fill:#020617;stroke:#60a5fa;stroke-width:3; }
+    .tx { fill:#0f766e; stroke:#5eead4; stroke-width:1px; }
+    .label { fill:#e5e7eb; font-size:13px; text-anchor:middle; }
+    .ds-body{ stroke: #ffffff; stroke-width: 2;fill: none; }
+    .ds-live .ds-body {stroke: #ef4444; }
+    .ds-off .ds-body {stroke: #22c55e; }
+    .es-body{ stroke: #ffffff; stroke-width: 2;fill: none; }
+    .es-live .es-body {stroke: #ef4444; }
+    .cb-off .cb{ fill:#22c55e;}
+    .cb { fill:#ffffff; stroke:#000000; stroke-width:1px; }
+    .cb-body {stroke: #000000;stroke-width: 2;fill: none; }
+    .cb-live .cb{fill:#ef4444; }
+    .cb-off .cb {fill:#22c55e; stroke: #ffffff; }
+    .line{stroke:#64748b;stroke-width:2; }
+    .line-live {stroke: #ef4444;}
+    .line-off {stroke: #22c55e;}
+    .step-box{stroke:#ffffff; }
+    .step-text{fill:#000; }
+    .tr-body{fill:#0b2a4a;stroke:#6fb3ff;stroke-width:2;transition:all 0.25s ease;}
+    .tr-live:hover .tr-body{fill:#163e66;stroke:#9ed0ff;}
+    .tr-clicked .tr-body{fill:#2c7be5;stroke:#080707;filter:drop-shadow(0 0 6px #4da3ff);}
+    .step-number{fill:#ffd600;font-size:22px;font-weight:bold;opacity:0;transform:scale(0.4);transition:all 0.35s ease;}
+    .step-number.show{opacity:1;transform:scale(1);}
+    #popup-right{position:absolute;right:20px;top:20px;width:600px;height:850px;background:#000000;border:2px solid #334155;
+                border-radius:10px;box-shadow:0 15px 40px rgba(0,0,0,0.4);padding:20px;z-index:10;overflow-y:auto;color:#ffffff;}
+    #popup-right h2{ margin-top:0; padding-bottom:10px; border-bottom:1px solid #cbd5e1; }
+    .popup-right-close{position:absolute;top:10px;right:14px;cursor:pointer;font-size:18px;color:#9bb3d6;}
+    .popup-right-close:hover{color:white;}
+    #popup-right-header{font-weight: bold;font-size: 18px;color: #38bdf8;border-bottom: 1px solid #334155;padding-bottom: 6px;}
+    #popup-right-header button{background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;}
+    #popup-right-header button:hover{color:#ef4444;}
+    #popup-left{position:absolute;left:20px;top:20px;width:600px;height:850px;background:#665959;border:2px solid #334155;
+                border-radius:10px;box-shadow:0 15px 40px rgba(0,0,0,0.4);padding:20px;z-index:10;overflow-y:auto;color:#ffffff;}
+    .popup-left-close{position:absolute;top:10px;right:14px;cursor:pointer;font-size:18px;color:#64748b;}
+    .popup-left-close:hover{color:#ef4444;}
+    #popup-left-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #cbd5e1;padding-bottom:10px;
+                       margin-bottom:15px;font-weight:bold;font-size:18px;}
+    @keyframes popupFade{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:translateY(0);}}
+    .step-box.red { fill:#ef4444; }
+    .step-box.blue { fill:#3b82f6; }
+    .step-box.yellow { fill:#facc15; }
+    #svg {width: 100%;height: 100vh ;display: block;}
+  </style>
+</head>
+<body>
+<div id="container">
+<div id="nav">
+    <h2>2공장 계통</h2>
+    <button class="btn" data-view="home" onclick="showView('home')">▶ 2공장 전체(VDU 154KV S/S)</button>
+    <button class="btn" data-view="154" onclick="showView('154')">VDU 154KV</button>
+    <button class="btn" data-view="PE154" onclick="showView('PE154')">PE 154KV</button>
+    <hr style="border-color:#1e293b" />
+    <button class="btn" data-view="700공정" onclick="showView('700공정')">PE/MFC생산팀(PE 154KV S/S)</button>
+    <button class="btn" data-view="600공정" onclick="showView('600공정')">VGOFCC/VRHCR/HOUSRU팀</button>
+    <button class="btn" data-view="500공정" onclick="showView('500공정')">VDU/HCR팀</button>
+  </div>
+
+<div id="content">
+<div id="svg-area"></div>
+<div id="popup-right" style="display:none">
+<div id="popup-right-header">
+<span id="popup-right-title"></span>
+<button class="popup-right-close" onclick="closePopupRight()">✕</button>
+</div>
+<div id="popup-right-content"></div>
+</div>
+<div id="popup-left" style="display:none">
+<div id="popup-left-header">
+<span id="popup-left-title"></span>
+<button class="popup-left-close" onclick="closePopupLeft()">✕</button>
+</div>
+<div id="popup-left-content"></div>
+</div>
+</div>
+
+<script>
+let activeTransformer = null;
+let currentPage = 0;
+let currentSteps = [];
+
+  function showCoord(evt) {
+  const svg = evt.target.closest("svg");
+  if (!svg) return;
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX;
+  pt.y = evt.clientY;
+  const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const coord = document.getElementById("coords");
+  if (coord) {
+    coord.textContent = `x=${cursor.x.toFixed(0)}  y=${cursor.y.toFixed(0)}`;
+  }
+}
+
+function showView(type) {
+  const c = document.getElementById('svg-area');
+  if (type === 'home') c.innerHTML = shome();
+  if (type === '154') c.innerHTML = s154();
+  if (type === 'PE154') c.innerHTML = PE154();
+  if (type === '700공정') c.innerHTML = s700공정();
+  if (type === '600공정') c.innerHTML = s600공정();
+  if (type === '500공정') c.innerHTML = s500공정();
+  setActiveMenu(type);
+}
+
+function setActiveMenu(view) {
+  document.querySelectorAll('#nav .btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const activeBtn = document.querySelector(`#nav .btn[data-view="${view}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  }
+
+function openProcedure(id){
+  const data = procedures[id];
+  if(!data) return;
+  const side = data.popup || "right";
+
+  document.getElementById("popup-right").style.display="none";
+  document.getElementById("popup-left").style.display="none";
+
+  const popup = document.getElementById(`popup-${side}`);
+  const title = document.getElementById(`popup-${side}-title`);
+  const content = document.getElementById(`popup-${side}-content`);
+
+  popup.style.display="block";
+  title.innerText = data.title;
+
+  // 👉 정전 / 복전 분리
+  const outage = [];
+  const restore = [];
+  let mode = "outage";
+
+  data.steps.forEach(s=>{
+    if(s.text.includes("복전")) mode = "restore";
+
+    if(mode === "outage") outage.push(s);
+    else restore.push(s);
+  });
+
+  // 👉 페이지 구성 (2페이지 고정)
+  currentSteps = [outage, restore];
+  currentPage = 0;
+
+  renderPage(content);
+}
+
+function renderPage(content){
+  const page = currentSteps[currentPage];
+
+  const html = page.map(s=>{
+    if(!s.text) return "<br>";
+    return `<div style="color:${s.color || '#ffffff'}">${highlightText(s.text)}</div>`;
+  }).join("");
+
+  content.innerHTML = `
+    <div style="padding-bottom:80px;">
+      ${html}
+    </div>
+
+    <!-- 👇 하단 고정 영역 -->
+    <div style="
+      position:absolute;
+      bottom:20px;
+      left:20px;
+      right:20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:#020617;
+      padding:10px;
+      border-radius:8px;
+      border:1px solid #334155;
+    ">
+      <button onclick="prevPage()">← 정전</button>
+      <button onclick="nextPage()">복전 →</button>
+    </div>
+  `;
+}
+
+function nextPage(){
+  if(currentPage < currentSteps.length - 1){
+    currentPage++;
+    updatePage();
+  }
+}
+
+document.addEventListener("keydown", function(e){
+  // 팝업 열려 있을 때만 동작
+  const rightOpen = document.getElementById("popup-right").style.display === "block";
+  const leftOpen = document.getElementById("popup-left").style.display === "block";
+
+  if(!rightOpen && !leftOpen) return;
+
+  if(e.key === "ArrowRight"){
+    nextPage();
+  }
+  if(e.key === "ArrowLeft"){
+    prevPage();
+  }
+});
+
+function prevPage(){
+  if(currentPage > 0){
+    currentPage--;
+    updatePage();
+  }
+}
+
+function updatePage(){
+  const right = document.getElementById("popup-right-content");
+  const left = document.getElementById("popup-left-content");
+
+  if(right.innerHTML !== ""){
+    renderPage(right);
+  } else {
+    renderPage(left);
+  }
+  if(activeTransformer){
+    showStepByPage(activeTransformer);
+  }
+}
+
+function closePopupRight() {
+  document.getElementById("popup-right").style.display = "none";
+  document.getElementById("popup-right-content").innerHTML = "";
+  document.querySelectorAll(".step-box").forEach(el => el.style.display="none");
+  document.querySelectorAll(".step-text").forEach(el => el.style.display="none");
+  if(activeTransformer){
+    hideNumber(activeTransformer);
+    activeTransformer = null;
+  }
+}
+
+function closePopupLeft(){
+  document.getElementById("popup-left").style.display = "none";
+  document.getElementById("popup-left-content").innerHTML = "";
+  document.querySelectorAll(".step-box").forEach(el => el.style.display="none");
+  document.querySelectorAll(".step-text").forEach(el => el.style.display="none");
+  if(activeTransformer){
+    hideNumber(activeTransformer);
+    activeTransformer = null;
+  }
+}
+
+function animateTransformer(id){
+  const tr = document.getElementById(id);
+  tr.classList.add("tr-clicked");
+  setTimeout(()=>{tr.classList.remove("tr-clicked");},400);
+}
+
+function showNumber(id){
+  const num = document.getElementById("num-"+id);
+  if(num){
+    num.classList.add("show");
+  }
+}
+function hideNumber(id){
+  const num = document.getElementById("num-"+id);
+  if(num){
+    num.classList.remove("show");
+  }
+}
+function hideAllNumbers(){
+  document.querySelectorAll(".step-number").forEach(el=>{
+    el.classList.remove("show");
+  });
+}
+function hideAllSteps(){
+  document.querySelectorAll(".step-box").forEach(el=> el.style.display="none");
+  document.querySelectorAll(".step-text").forEach(el=> el.style.display="none");
+}
+function transformerClick(id){
+  const isSame = activeTransformer === id;
+  hideAllNumbers();
+  hideAllSteps();
+  closePopupRight();
+  closePopupLeft();
+  if(isSame){activeTransformer = null;return;}
+  animateTransformer(id);
+  showNumber(id);
+  openProcedure(id);
+  showStepByPage(id);
+  activeTransformer = id;
+}
+
+function highlightText(text){
+  return text
+    .replace(/"CLOSE"/g, '<span style="color:red; font-weight:bold">"CLOSE"</span>')
+    .replace(/"OPEN"/g, '<span style="color:blue; font-weight:bold">"OPEN"</span>')
+    .replace(/"확인"/g, '<span style="color:yellow; font-weight:bold">"확인"</span>');
+}
+
+function showStepByPage(trId){
+  const range = stepRanges[trId];
+  if(!range) return;
+  const [start, end] = currentPage === 0 ? range.outage : range.restore;
+  for(let i=1; i<=120; i++){
+    const box = document.getElementById(`step-${trId}-box-${i}`);
+    const text = document.getElementById(`step-${trId}-text-${i}`);
+    if(!box || !text) continue;
+    if(i >= start && i <= end){
+      box.style.display = "block";
+      text.style.display = "block";
+    } else {
+      box.style.display = "none";
+      text.style.display = "none";
+    }
+  }
+}
+
+const stepRanges = {
+  "712TR201": { outage: [1,50], restore: [51,100] },
+  "712TR202": { outage: [1,50], restore: [51,100] }
+};
+
+const procedures = {
+"712TR201":{
+title:"712TR201 OVERHAUL을 위한 전원 절체 작업", color:"white",
+popup:"right",
+steps:[
+{ text:"정전 절차", color:"#ef4444" },
+{ text:"", color:"" },
+{ text:"1. MFC 생산팀 변전실 732HP301AB BACKUP 차단기를 \"CLOSE\" 한다.", color:"white" },
+{ text:"2. MFC 생산팀 변전실 712HP301A 차단기를 \"OPEN\" 한다.", color:"white" },
+{ text:"3. 계통 전원 상태를 \"확인\" 한다.", color:"white" },
+{ text:"4. MFC 생산팀 변전실 752F212 차단기를 \"OPEN\" 한다.", color:"white" },
+{ text:"5. MFC 생산팀 712HP301A 전압계가 0V 인 것을 \"확인\" 한다.", color:"white" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"white" },
+
+{ text:"복전 절차", color:"blue" },
+{ text:"", color:"" },
+{ text:"1. MFC 생산팀 변전실 732HP301AB BACKUP 차단기를 \"OPEN\" 한다.", color:"white" },
+{ text:"2. MFC 생산팀 변전실 712HP301A 차단기를 \"OPEN\" 한다.", color:"white" },
+{ text:"3. 계통 전원 상태를 \"확인\" 한다.", color:"white" },
+{ text:"4. MFC 생산팀 변전실 752F212 차단기를 \"OPEN\" 한다.", color:"white" },
+{ text:"5. MFC 생산팀 712HP301A 전압계가 0V 인 것을 \"확인\" 한다.", color:"white" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"white" },
+]
+},
+
+"712TR202":{
+title:"712TR202 OVERHAUL을 위한 전원 절체 작업",
+popup:"right",
+steps:[
+{ text:"정전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 732HP301AB BACKUP 차단기를 \"CLOSE\" 한다."},
+{ text:"2. MFC 생산팀 변전실 712HP301B 차단기를 \"OPEN\" 한다."},
+{ text:"3. 계통 전원 상태를 \"확인\" 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F215 차단기를 \"OPEN\" 한다."},
+{ text:"5. MFC 생산팀 712HP301B 전압계가 0V 인 것을 \"확인\" 한다."},
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다."},
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 732HP301AB BACKUP 차단기를 \"CLOSE\" 한다."},
+{ text:"2. MFC 생산팀 변전실 712HP301B 차단기를 \"OPEN\" 한다."},
+{ text:"3. 계통 전원 상태를 \"확인\" 한다.", color:"yellow"},
+{ text:"4. MFC 생산팀 변전실 752F215 차단기를 \"OPEN\" 한다."},
+{ text:"5. MFC 생산팀 712HP301B 전압계가 0V 인 것을 \"확인\" 한다."},
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다."},
+]
+},
+
+"716TR201":{
+title:"716TR201 OVERHAUL을 위한 전원 절체 작업",
+popup:"right",
+steps:[
+{ text:"정전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 716HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 716HP301A 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F213 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 716HP301A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 716HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 716HP301A 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F213 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 716HP301A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+]
+},
+
+"716TR202":{
+title:"716TR202 OVERHAUL을 위한 전원 절체 작업",
+popup:"right",
+steps:[
+{ text:"정전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 716HP301AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 716HP301B 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F216 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 716HP301B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 716HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 716HP301B 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F216 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 716HP301B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+]
+},
+
+"732TR201":{
+title:"732TR201 OVERHAUL을 위한 전원 절체 작업",
+popup:"left",
+steps:[
+{ text:"정전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 732HP302AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 732HP301A 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F220 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 732HP301A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 732HP302AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 732HP301A 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F220 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 732HP301A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+]
+},
+
+"732TR202":{
+title:"732TR202 OVERHAUL을 위한 전원 절체 작업",
+popup:"left",
+steps:[
+{ text:"정전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 732HP302AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 732HP301B 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F224 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 732HP301B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 732HP302AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 732HP301B 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F224 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 732HP301B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+]
+},
+
+"732TR203":{
+title:"732TR203 OVERHAUL을 위한 전원 절체 작업",
+popup:"left",
+steps:[
+{ text:"정전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 732HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 732HP302A 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F218 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 732HP302A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 732HP302AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 732HP302A 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F218 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 732HP302A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+]
+},
+
+"732TR204":{
+title:"732TR204 OVERHAUL을 위한 전원 절체 작업",
+popup:"left",
+steps:[
+{ text:"정전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 732HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 732HP302B 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F222 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 732HP302B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 732HP302AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 732HP302B 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F222 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 732HP302B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+]
+},
+
+"720TR201":{
+title:"720TR201 OVERHAUL을 위한 전원 절체 작업",
+popup:"left",
+steps:[
+{ text:"정전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 720HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 720HP301A 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F219 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 720HP301A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 720HP302AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 720HP301A 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"yellow" },
+{ text:"4. MFC 생산팀 변전실 752F219 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 720HP301A 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+]
+},
+
+"720TR202":{
+title:"720TR202 OVERHAUL을 위한 전원 절체 작업",
+popup:"left",
+steps:[
+{ text:"정전 절차", color:"red" },
+{ text:"1. MFC 생산팀 변전실 720HP301AB BACKUP 차단기를 CLOSE 한다.", color:"red" },
+{ text:"2. MFC 생산팀 변전실 720HP301B 차단기를 OPEN 한다.", color:"red" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"#eab308" },
+{ text:"4. MFC 생산팀 변전실 752F225 차단기를 OPEN 한다.", color:"red" },
+{ text:"5. MFC 생산팀 720HP301B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"red" },
+{ text:"", color:"" },
+{ text:"", color:"" },
+{ text:"복전 절차", color:"blue" },
+{ text:"1. MFC 생산팀 변전실 720HP302AB BACKUP 차단기를 CLOSE 한다.", color:"blue" },
+{ text:"2. MFC 생산팀 변전실 720HP302B 차단기를 OPEN 한다.", color:"blue" },
+{ text:"3. 계통 전원 상태를 확인 한다.", color:"#eab308" },
+{ text:"4. MFC 생산팀 변전실 752F225 차단기를 OPEN 한다.", color:"blue" },
+{ text:"5. MFC 생산팀 720HP301B 전압계가 0V 인 것을 확인 한다.", color:"yellow" },
+{ text:"6. 변압기 방전 및 접지기구 설치 후 OVERHAUL 작업을 진행 한다.", color:"blue" },
+]
+}
+};
+
+function PE154() {
+   return `
+  <svg id="svg" viewBox="-30 -30 1630 930" preserveAspectRatio="xMidYMid meet">
+<!--154KV TL -->
+    <text id="coords" x="20" y="25" fill="yellow" font-size="14"></text>
+    <text x="25" y="160" class="label" style="font-size:13px"> 154KV </text>
+    <text x="25" y="510" class="label" style="font-size:13px"> 22.9KV </text>
+    <text x="25" y="800" class="label" style="font-size:13px"> 6.6KV </text>
+    <text x="700" y="40" class="label" style="font-size:20px">PE 154KV</text> 
+  <!--연계선로 -->
+    <line x1="750" y1="150" x2="750" y2="210" class="line line-live"/> 
+    <line x1="850" y1="165" x2="850" y2="210" class="line line-live"/> 
+    <line x1="750" y1="210" x2="780" y2="210" class="line line-live"/> 
+    <line x1="780" y1="210" x2="850" y2="210" class="line line-live"/> 
+    <g id="752BC" class="cb-live" transform="translate(780,200)">
+    <rect x="0" y="0" width="40" height="20" class="cb" />
+    <text x="20" y="40" class="label" style="pointer-events:none">752BC</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="30" cy="10" r="4" class="cb-body"/>
+    </g>
+  <!--154 TL -->
+    <rect x="450" y="1" width="100" height="20" class="bus" />
+    <text x="500" y="15" class="label">154kV TL</text>
+    <rect x="960" y="1" width="100" height="20" class="bus" />
+    <text x="1010" y="15" class="label">154kV TL</text>
+  <!--154KV TL-1 CB -->
+    <g id="752L01" class="cb-live" transform="translate(490,50)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="55" y="25" class="label" style="pointer-events:none">752L01</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <line x1="500" y1="22" x2="500" y2="50" class="line line-live"/> 
+    <line x1="500" y1="90" x2="500" y2="120" class="line line-live"/> 
+  <!--단로기-->
+    <line x1="470" y1="120" x2="470" y2="124" class="line line-live"/> 
+    <line x1="470" y1="145" x2="470" y2="150" class="line line-live"/>
+    <line x1="470" y1="120" x2="500" y2="120" class="line line-live"/>
+    <line x1="530" y1="120" x2="530" y2="124" class="line line-off"/>
+    <line x1="530" y1="145" x2="530" y2="165" class="line line-off"/>
+    <line x1="500" y1="120" x2="530" y2="120" class="line line-off"/>
+  <!--154KV TL-2 CB -->
+    <g id="752L02" class="cb-live" transform="translate(1000,50)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="55" y="25" class="label" style="pointer-events:none">752L02</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <line x1="1010" y1="22" x2="1010" y2="50" class="line line-live"/> 
+    <line x1="1010" y1="90" x2="1010" y2="120" class="line line-live"/> 
+  <!--단로기-->
+    <line x1="980" y1="120" x2="980" y2="124" class="line line-off"/> 
+    <line x1="980" y1="145" x2="980" y2="150" class="line line-off"/> 
+    <line x1="980" y1="120" x2="1010" y2="120" class="line line-off"/>
+    <line x1="1040" y1="120" x2="1040" y2="124" class="line line-live"/>
+    <line x1="1040" y1="145" x2="1040" y2="165" class="line line-live"/>
+    <line x1="1010" y1="120" x2="1040" y2="120" class="line line-live"/>
+  <!--154KV TL BUS-->
+    <line x1="50" y1="150" x2="1550" y2="150" class="line line-live"/> 
+    <line x1="50" y1="165" x2="1550" y2="165" class="line line-live"/> 
+  <!--TL ES & DS-->
+    <g id= "789L1B1" class="ds-live" transform="translate(465,122)">
+    <line x1="0" y1="2" x2="0" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="-35" y="15" class="label" style="pointer-events:none">789L1B1</text>
+    </g>
+    <g id= "789L1B2" class="ds-off" transform="translate(525,122)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="45" y="15" class="label" style="pointer-events:none">789L1B2</text>
+    </g>
+    <g id= "789L2B1" class="ds-off" transform="translate(975,122)">
+    <line x1="0" y1="2" x2="0" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="-35" y="15" class="label" style="pointer-events:none">789L2B1</text>
+    </g>
+    <g id= "789L2B2" class="ds-live" transform="translate(1035,122)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="45" y="15" class="label" style="pointer-events:none">789L2B2</text>
+    </g>
+<!--154KV -->
+  <!--154KV CB -->
+    <g id="752T01" class="cb-live" transform="translate(160,230)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752T01</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!-- 154kv단로기 -->
+    <line x1="155" y1="150" x2="155" y2="173" class="line line-live"/> 
+    <line x1="155" y1="193" x2="155" y2="200" class="line line-live"/> 
+    <line x1="185" y1="165" x2="185" y2="173" class="line line-live"/>
+    <line x1="185" y1="194" x2="185" y2="200" class="line line-live"/>
+    <line x1="155" y1="200" x2="170" y2="200" class="line line-live"/> 
+    <line x1="170" y1="200" x2="185" y2="200" class="line line-live"/> 
+  <!-- 22.9kv단로기 line -->
+    <line x1="155" y1="472" x2="155" y2="465" class="line line-live"/> 
+    <line x1="155" y1="493" x2="155" y2="500" class="line line-live"/>
+    <line x1="185" y1="472" x2="185" y2="465" class="line line-live"/>
+    <line x1="185" y1="515" x2="185" y2="493" class="line line-live"/>
+    <line x1="155" y1="465" x2="170" y2="465" class="line line-live"/> 
+    <line x1="170" y1="465" x2="185" y2="465" class="line line-live"/> 
+  <!--line -->
+    <line x1="170" y1="200" x2="170" y2="230" class="line line-live"/> 
+    <line x1="170" y1="270" x2="170" y2="308" class="line line-live"/> 
+    <line x1="170" y1="348" x2="170" y2="391" class="line line-live"/> 
+    <line x1="170" y1="430" x2="170" y2="465" class="line line-live"/> 
+    <g id="752T02" class="cb-live" transform="translate(450,230)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752T02</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--154kv단로기 -->
+    <line x1="445" y1="150" x2="445" y2="173" class="line line-live"/> 
+    <line x1="445" y1="193" x2="445" y2="200" class="line line-live"/>
+    <line x1="475" y1="165" x2="475" y2="173" class="line line-live"/>
+    <line x1="475" y1="194" x2="475" y2="200" class="line line-live"/>
+    <line x1="445" y1="200" x2="460" y2="200" class="line line-live"/> 
+    <line x1="460" y1="200" x2="475" y2="200" class="line line-live"/>
+  <!-- 22.9kv단로기 line-->
+    <line x1="445" y1="472" x2="445" y2="465" class="line line-live"/> 
+    <line x1="445" y1="493" x2="445" y2="500" class="line line-live"/> 
+    <line x1="475" y1="472" x2="475" y2="465" class="line line-live"/>
+    <line x1="475" y1="515" x2="475" y2="493" class="line line-live"/>
+    <line x1="445" y1="465" x2="460" y2="465" class="line line-live"/> 
+    <line x1="460" y1="465" x2="475" y2="465" class="line line-live"/> 
+  <!--line -->
+    <line x1="460" y1="200" x2="460" y2="230" class="line line-live"/> 
+    <line x1="460" y1="270" x2="460" y2="308" class="line line-live"/> 
+    <line x1="460" y1="348" x2="460" y2="391" class="line line-live"/> 
+    <line x1="460" y1="430" x2="460" y2="465" class="line line-live"/> 
+    <g id="752T03" class="cb-live" transform="translate(1000,230)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752T03</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--154kv단로기 -->
+    <line x1="995" y1="150" x2="995" y2="173" class="line line-live"/>
+    <line x1="995" y1="193" x2="995" y2="200" class="line line-live"/>  
+    <line x1="1025" y1="165" x2="1025" y2="173" class="line line-live"/>
+     <line x1="1025" y1="194" x2="1025" y2="200" class="line line-live"/>
+    <line x1="995" y1="200" x2="1010" y2="200" class="line line-live"/> 
+    <line x1="1010" y1="200" x2="1025" y2="200" class="line line-live"/>
+    <!-- 22.9kv단로기 line--> 
+    <line x1="995" y1="472" x2="995" y2="465" class="line line-live"/> 
+    <line x1="995" y1="493" x2="995" y2="500" class="line line-live"/> 
+    <line x1="1025" y1="472" x2="1025" y2="465" class="line line-live"/>
+    <line x1="1025" y1="515" x2="1025" y2="493" class="line line-live"/>
+    <line x1="995" y1="465" x2="1010" y2="465" class="line line-live"/> 
+    <line x1="1010" y1="465" x2="1025" y2="465" class="line line-live"/>
+  <!--line -->
+    <line x1="1010" y1="200" x2="1010" y2="230" class="line line-live"/> 
+    <line x1="1010" y1="270" x2="1010" y2="308" class="line line-live"/> 
+    <line x1="1010" y1="348" x2="1010" y2="391" class="line line-live"/> 
+    <line x1="1010" y1="430" x2="1010" y2="465" class="line line-live"/>
+    <g id="752T04" class="cb-live" transform="translate(1330,230)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752T04</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--154kv단로기 -->
+    <line x1="1325" y1="150" x2="1325" y2="173" class="line line-live"/> 
+    <line x1="1325" y1="193" x2="1325" y2="200" class="line line-live"/>
+    <line x1="1355" y1="165" x2="1355" y2="173" class="line line-live"/>
+    <line x1="1355" y1="194" x2="1355" y2="200" class="line line-live"/>
+    <line x1="1325" y1="200" x2="1340" y2="200" class="line line-live"/> 
+    <line x1="1340" y1="200" x2="1355" y2="200" class="line line-live"/>
+    <!-- 22.9kv단로기 line -->
+    <line x1="1325" y1="472" x2="1325" y2="465" class="line line-live"/>
+    <line x1="1325" y1="493" x2="1325" y2="500" class="line line-live"/>  
+    <line x1="1355" y1="472" x2="1355" y2="465" class="line line-live"/>
+    <line x1="1355" y1="515" x2="1355" y2="493" class="line line-live"/>
+    <line x1="1325" y1="465" x2="1355" y2="465" class="line line-live"/> 
+    <line x1="1325" y1="465" x2="1325" y2="465" class="line line-live"/>
+  <!--line -->
+    <line x1="1340" y1="200" x2="1340" y2="230" class="line line-live"/> 
+    <line x1="1340" y1="270" x2="1340" y2="308" class="line line-live"/> 
+    <line x1="1340" y1="348" x2="1340" y2="391" class="line line-live"/> 
+    <line x1="1340" y1="430" x2="1340" y2="465" class="line line-live"/> 
+  <!--22.9KV CB -->
+    <g id="752T201" class="cb-live" transform="translate(160,390)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="55" y="25" class="label" style="pointer-events:none">752T201</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="752T202" class="cb-live" transform="translate(450,390)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="55" y="25" class="label" style="pointer-events:none">752T202</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="752T203" class="cb-live" transform="translate(1000,390)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="55" y="25" class="label" style="pointer-events:none">752T203</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="752T204" class="cb-live" transform="translate(1330,390)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="55" y="25" class="label" style="pointer-events:none">752T204</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--TR -->
+    <g id="727TR101" class="tr-live" transform="translate(20,320)">
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="165" cy="7.5" r="9" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="210" y="10" class="label" style="pointer-events:none">727TR101</text>
+    </g>
+    <g id="727TR102" class="tr-live" transform="translate(310,320)">
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="165" cy="7.5" r="9" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="210" y="10" class="label" style="pointer-events:none">727TR102</text>
+    </g>
+    <g id="727TR103" class="tr-live" transform="translate(860,320)">
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="165" cy="7.5" r="9" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="210" y="10" class="label" style="pointer-events:none">727TR103</text>
+    </g>
+    <g id="727TR104" class="tr-live" transform="translate(1190,320)">
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="165" cy="7.5" r="9" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="210" y="10" class="label" style="pointer-events:none">727TR104</text>
+    </g>
+  <!--154KV ES & DS-->
+    <g id= "789T1B1" class="ds-live" transform="translate(150,170)">
+    <line x1="0" y1="2" x2="0" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="-35" y="17" class="label" style="pointer-events:none">789T1B1</text>
+    </g>
+    <g id= "789T1B2" class="ds-live" transform="translate(180,170)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="43" y="17" class="label" style="pointer-events:none">789T1B2</text>
+    </g>
+    <g id= "789T2B1" class="ds-live" transform="translate(440,170)">
+    <line x1="0" y1="2" x2="0" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="-35" y="17" class="label" style="pointer-events:none">789T2B1</text>
+    </g>
+    <g id= "789T2B2" class="ds-live" transform="translate(470,170)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="43" y="17" class="label" style="pointer-events:none">789T2B2</text>
+    </g>
+    <g id= "789T3B1" class="ds-live" transform="translate(990,170)">
+    <line x1="0" y1="2" x2="0" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="-35" y="17" class="label" style="pointer-events:none">789T3B1</text>
+    </g>
+    <g id= "789T3B2" class="ds-live" transform="translate(1020,170)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="43" y="17" class="label" style="pointer-events:none">789T3B2</text>
+    </g>
+    <g id= "789T4B1" class="ds-live" transform="translate(1320,170)">
+    <line x1="0" y1="2" x2="0" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="-35" y="17" class="label" style="pointer-events:none">789T4B1</text>
+    </g>
+    <g id= "789T4B2" class="ds-live" transform="translate(1350,170)">
+    <line x1="10" y1="3" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="43" y="17" class="label" style="pointer-events:none">789T4B2</text>
+    </g>
+    <!--22.9KV ES & DS-->
+    <g id= "789T201B1" class="ds-live" transform="translate(150,470)">
+    <line x1="5" y1="2" x2="-5" y2="20" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <circle cx="-10" cy="12.5" r="2" class="ds-body"/>
+    <line x1="-23" y1="13" x2="-13" y2="13" class="es-body"/>
+    <line x1="-23" y1="4" x2="-23" y2="22" class="es-body"/>
+    <line x1="-28" y1="8" x2="-28" y2="18" class="es-body"/>
+    <line x1="-33" y1="11" x2="-33" y2="15" class="es-body"/>
+    <text x="-37" y="-20" class="label" style="pointer-events:none">789T201B1</text>
+    <text x="-37" y="-0" class="label" style="pointer-events:none">ES789ET201</text>
+    </g>
+    <g id= "789T201B2" class="ds-live" transform="translate(180,470)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="45" y="-0" class="label" style="pointer-events:none">789T201B2</text>
+    </g>
+    <g id= "789T202B1" class="ds-live" transform="translate(440,470)">
+    <line x1="5" y1="2" x2="-5" y2="20" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <circle cx="-10" cy="12.5" r="2" class="ds-body"/>
+    <line x1="-23" y1="13" x2="-13" y2="13" class="es-body"/>
+    <line x1="-23" y1="4" x2="-23" y2="22" class="es-body"/>
+    <line x1="-28" y1="8" x2="-28" y2="18" class="es-body"/>
+    <line x1="-33" y1="11" x2="-33" y2="15" class="es-body"/>
+    <text x="-37" y="-20" class="label" style="pointer-events:none">789T202B1</text>
+    <text x="-37" y="-0" class="label" style="pointer-events:none">ES789ET202</text>
+    </g>
+    <g id= "789T202B2" class="ds-live" transform="translate(470,470)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="45" y="-0" class="label" style="pointer-events:none">789T202B2</text>
+    </g>
+    <g id= "789T203B1" class="ds-live" transform="translate(990,470)">
+    <line x1="5" y1="2" x2="-5" y2="20" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <circle cx="-10" cy="12.5" r="2" class="ds-body"/>
+    <line x1="-23" y1="13" x2="-13" y2="13" class="es-body"/>
+    <line x1="-23" y1="4" x2="-23" y2="22" class="es-body"/>
+    <line x1="-28" y1="8" x2="-28" y2="18" class="es-body"/>
+    <line x1="-33" y1="11" x2="-33" y2="15" class="es-body"/>
+    <text x="-37" y="-20" class="label" style="pointer-events:none">789T203B1</text>
+    <text x="-37" y="-0" class="label" style="pointer-events:none">ES789ET203</text>
+    </g>
+    <g id= "789T203B2" class="ds-live" transform="translate(1020,470)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="45" y="-0" class="label" style="pointer-events:none">789T203B2</text>
+    </g>
+    <g id= "789T204B1" class="ds-live" transform="translate(1320,470)">
+    <line x1="5" y1="2" x2="-5" y2="20" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <circle cx="-10" cy="12.5" r="2" class="ds-body"/>
+    <line x1="-23" y1="13" x2="-13" y2="13" class="es-body"/>
+    <line x1="-23" y1="4" x2="-23" y2="22" class="es-body"/>
+    <line x1="-28" y1="8" x2="-28" y2="18" class="es-body"/>
+    <line x1="-33" y1="11" x2="-33" y2="15" class="es-body"/>
+    <text x="-37" y="-20" class="label" style="pointer-events:none">789T204B1</text>
+    <text x="-37" y="-0" class="label" style="pointer-events:none">ES789ET204</text>
+    </g>
+    <g id= "789T204B2" class="ds-live" transform="translate(1350,470)">
+    <line x1="10" y1="2" x2="10" y2="23" class="ds-body"/>
+    <circle cx="5" cy="5" r="2" class="ds-body"/>
+    <circle cx="5" cy="20" r="2" class="ds-body"/>
+    <text x="45" y="-0" class="label" style="pointer-events:none">789T204B2</text>
+  <!-- 727TR101 ES-->
+    </g>
+    <g id= "ES789ET1a" class="es-off" transform="translate(195,205)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET1a</text>
+    </g>
+    <line x1="170" y1="218" x2="180" y2="218" class="line-live"/>
+    <g id= "ES789ET1b" class="es-off" transform="translate(195,275)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET1b</text>
+    </g>
+    <line x1="170" y1="288" x2="180" y2="288" class="line-live"/>
+  <!-- 727TR102 ES-->
+    </g>
+    <g id= "ES789ET2a" class="es-off" transform="translate(485,205)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET2a</text>
+    </g>
+    <line x1="460" y1="218" x2="470" y2="218" class="line-live"/>
+    </g>
+    <g id= "ES789ET2b" class="es-off" transform="translate(485,275)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET2b</text>
+    </g>
+    <line x1="460" y1="288" x2="470" y2="288" class="line-live"/>
+    <!-- 727TR103 ES-->
+    </g>
+    <g id= "ES789ET3a" class="es-off" transform="translate(1035,205)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET3a</text>
+    </g>
+    <line x1="1010" y1="218" x2="1020" y2="218" class="line-live"/>
+    </g>
+    <g id= "ES789ET3b" class="es-off" transform="translate(1035,275)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET3b</text>
+    </g>
+    <line x1="1010" y1="288" x2="1020" y2="288" class="line-live"/>
+    <!-- 727TR104 ES-->
+    </g>
+    <g id= "ES789ET4a" class="es-off" transform="translate(1365,205)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET4a</text>
+    </g>
+    <line x1="1340" y1="218" x2="1350" y2="218" class="line-live"/>
+    </g>
+    <g id= "ES789ET4b" class="es-off" transform="translate(1365,275)">
+    <line x1="-15" y1="5" x2="1" y2="13" class="es-body"/>
+    <line x1="0" y1="13" x2="10" y2="13" class="es-body"/>
+    <line x1="10" y1="4" x2="10" y2="22" class="es-body"/>
+    <line x1="15" y1="8" x2="15" y2="18" class="es-body"/>
+    <line x1="20" y1="11" x2="20" y2="15" class="es-body"/>
+    <text x="70" y="17" class="label" style="pointer-events:none">ES789ET4b</text>
+    </g>
+    <line x1="1340" y1="288" x2="1350" y2="288" class="line-live"/>
+
+<!--22.9KV -->
+  <!--22.9KV BUS -->
+    <line x1="50" y1="500" x2="620" y2="500" class="line line-live"/> 
+    <line x1="50" y1="515" x2="620" y2="515" class="line line-live"/> 
+    <line x1="680" y1="500" x2="1550" y2="500" class="line line-live"/> 
+    <line x1="680" y1="515" x2="1550" y2="515" class="line line-live"/> 
+  <!--연계선로 -->
+    <g id="752BSA" class="cb-off" transform="translate(630,450)">
+    <rect x="0" y="0" width="40" height="20" class="cb" />
+    <text x="20" y="40" class="label" style="pointer-events:none">752BSA</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="30" cy="10" r="4" class="cb-body"/>
+    </g>
+    <line x1="620" y1="500" x2="620" y2="460" class="line line-live"/> 
+    <line x1="680" y1="500" x2="680" y2="460" class="line line-live"/> 
+    <line x1="620" y1="460" x2="630" y2="460" class="line line-live"/> 
+    <line x1="670" y1="460" x2="680" y2="460" class="line line-live"/> 
+    <g id="752BSB" class="cb-off" transform="translate(630,545)">
+    <rect x="0" y="0" width="40" height="20" class="cb" />
+    <text x="20" y="40" class="label" style="pointer-events:none">752BSB</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="30" cy="10" r="4" class="cb-body"/>
+    </g>
+    <line x1="620" y1="515" x2="620" y2="555" class="line line-live"/> 
+    <line x1="680" y1="515" x2="680" y2="555" class="line line-live"/> 
+    <line x1="620" y1="555" x2="630" y2="555" class="line line-live"/> 
+    <line x1="670" y1="555" x2="680" y2="555" class="line line-live"/> 
+    <g id="752BC1" class="cb-live" transform="translate(305,425)">
+    <rect x="0" y="0" width="40" height="20" class="cb" />
+    <text x="20" y="40" class="label" style="pointer-events:none">752BC1</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="30" cy="10" r="4" class="cb-body"/>
+    </g>
+    <line x1="295" y1="500" x2="295" y2="435" class="line line-live"/> 
+    <line x1="355" y1="515" x2="355" y2="435" class="line line-live"/> 
+    <line x1="295" y1="435" x2="305" y2="435" class="line line-live"/> 
+    <line x1="345" y1="435" x2="355" y2="435" class="line line-live"/>
+    <g id="752BC2" class="cb-live" transform="translate(1185,425)">
+    <rect x="0" y="0" width="40" height="20" class="cb" />
+    <text x="20" y="40" class="label" style="pointer-events:none">752BC2</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="30" cy="10" r="4" class="cb-body"/>
+    </g>
+    <line x1="1175" y1="500" x2="1175" y2="435" class="line line-live"/> 
+    <line x1="1235" y1="515" x2="1235" y2="435" class="line line-live"/> 
+    <line x1="1175" y1="435" x2="1185" y2="435" class="line line-live"/> 
+    <line x1="1225" y1="435" x2="1235" y2="435" class="line line-live"/>
+  <!--22.9KV CB -->
+    <g id="752F212" class="cb-live" transform="translate(75,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F212</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="70" y1="500" x2="70" y2="550" class="line line-live"/> 
+    <line x1="100" y1="515" x2="100" y2="550" class="line line-live"/>
+    <line x1="70" y1="550" x2="85" y2="550" class="line line-live"/> 
+    <line x1="85" y1="550" x2="100" y2="550" class="line line-live"/> 
+  <!-- 선로 -->
+    <line id="line-main-712-1" x1="85" y1="550" x2="85" y2="570" class="line line-live"/>
+    <line id="line-main-712-2" x1="85" y1="611" x2="85" y2="632" class="line line-live"/>
+    <line id="line-main-712-3" x1="85" y1="673" x2="85" y2="696" class="line line-live"/>
+    <line id="line-main-712-4" x1="85" y1="738" x2="85" y2="800" class="line line-live"/>
+    <line id="line-main-712-5" x1="30" y1="800" x2="140" y2="800" class="line line-live"/>
+    <g id="752F215" class="cb-live" transform="translate(205,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F215</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="200" y1="500" x2="200" y2="550" class="line line-live"/>
+    <line x1="230" y1="515" x2="230" y2="550" class="line line-live"/>
+    <line x1="200" y1="550" x2="215" y2="550" class="line line-live"/>
+    <line x1="215" y1="550" x2="230" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-712-6" x1="215" y1="550" x2="215" y2="570" class="line line-live"/>
+    <line id="line-main-712-7" x1="215" y1="611" x2="215" y2="632" class="line line-live"/>
+    <line id="line-main-712-8" x1="215" y1="673" x2="215" y2="696" class="line line-live"/>
+    <line id="line-main-712-9" x1="215" y1="738" x2="215" y2="800" class="line line-live"/>
+    <line id="line-main-712-10" x1="160" y1="800" x2="270" y2="800" class="line line-live"/>
+    <g id="752F213" class="cb-live" transform="translate(355,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F213</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="350" y1="500" x2="350" y2="550" class="line line-live"/>
+    <line x1="380" y1="515" x2="380" y2="550" class="line line-live"/>
+    <line x1="350" y1="550" x2="365" y2="550" class="line line-live"/> 
+    <line x1="365" y1="550" x2="380" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-716-1" x1="365" y1="550" x2="365" y2="570" class="line line-live"/>
+    <line id="line-main-716-2" x1="365" y1="611" x2="365" y2="632" class="line line-live"/>
+    <line id="line-main-716-3" x1="365" y1="673" x2="365" y2="696" class="line line-live"/>
+    <line id="line-main-716-4" x1="365" y1="738" x2="365" y2="800" class="line line-live"/>
+    <line id="line-main-716-5" x1="310" y1="800" x2="420" y2="800" class="line line-live"/> 
+    <g id="752F216" class="cb-live" transform="translate(505,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F216</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="500" y1="500" x2="500" y2="550" class="line line-live"/> 
+    <line x1="530" y1="515" x2="530" y2="550" class="line line-live"/>
+    <line x1="500" y1="550" x2="515" y2="550" class="line line-live"/> 
+    <line x1="515" y1="550" x2="530" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-716-6" x1="515" y1="550" x2="515" y2="570" class="line line-live"/> 
+    <line id="line-main-716-7" x1="515" y1="611" x2="515" y2="632" class="line line-live"/> 
+    <line id="line-main-716-8" x1="515" y1="673" x2="515" y2="696" class="line line-live"/> 
+    <line id="line-main-716-9" x1="515" y1="738" x2="515" y2="800" class="line line-live"/>
+    <line id="line-main-716-10" x1="460" y1="800" x2="570" y2="800" class="line line-live"/> 
+    <g id="752F220" class="cb-live" transform="translate(745,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F220</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="740" y1="500" x2="740" y2="550" class="line line-live"/>  
+    <line x1="770" y1="515" x2="770" y2="550" class="line line-live"/> 
+    <line x1="740" y1="550" x2="755" y2="550" class="line line-live"/>
+    <line x1="755" y1="550" x2="770" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-732-1-1" x1="755" y1="550" x2="755" y2="570" class="line line-live"/> 
+    <line id="line-main-732-1-2" x1="755" y1="611" x2="755" y2="632" class="line line-live"/>
+    <line id="line-main-732-1-3" x1="755" y1="673" x2="755" y2="696" class="line line-live"/>
+    <line id="line-main-732-1-4" x1="755" y1="738" x2="755" y2="800" class="line line-live"/>
+    <line id="line-main-732-1-5" x1="700" y1="800" x2="810" y2="800" class="line line-live"/>
+    <g id="752F224" class="cb-live" transform="translate(895,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F224</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="890" y1="500" x2="890" y2="550" class="line line-live"/>
+    <line x1="920" y1="515" x2="920" y2="550" class="line line-live"/> 
+    <line x1="890" y1="550" x2="905" y2="550" class="line line-live"/>
+    <line x1="905" y1="550" x2="920" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-732-1-6" x1="905" y1="550" x2="905" y2="570" class="line line-live"/> 
+    <line id="line-main-732-1-7" x1="905" y1="611" x2="905" y2="632" class="line line-live"/>
+    <line id="line-main-732-1-8" x1="905" y1="673" x2="905" y2="696" class="line line-live"/> 
+    <line id="line-main-732-1-9" x1="905" y1="738" x2="905" y2="800" class="line line-live"/>
+    <line id="line-main-732-1-10" x1="850" y1="800" x2="960" y2="800" class="line line-live"/> 
+    <g id="752F218" class="cb-live" transform="translate(1045,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F218</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="1040" y1="500" x2="1040" y2="550" class="line line-live"/>
+    <line x1="1070" y1="515" x2="1070" y2="550" class="line line-live"/> 
+    <line x1="1040" y1="550" x2="1055" y2="550" class="line line-live"/>
+    <line x1="1055" y1="550" x2="1070" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-732-2-1" x1="1055" y1="550" x2="1055" y2="570" class="line line-live"/> 
+    <line id="line-main-732-2-2" x1="1055" y1="611" x2="1055" y2="632" class="line line-live"/>
+    <line id="line-main-732-2-3" x1="1055" y1="673" x2="1055" y2="696" class="line line-live"/> 
+    <line id="line-main-732-2-4" x1="1055" y1="738" x2="1055" y2="800" class="line line-live"/>
+    <line id="line-main-732-2-5" x1="1000" y1="800" x2="1110" y2="800" class="line line-live"/> 
+    <g id="752F222" class="cb-live" transform="translate(1195,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F222</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="1190" y1="500" x2="1190" y2="550" class="line line-live"/> 
+    <line x1="1220" y1="515" x2="1220" y2="550" class="line line-live"/> 
+    <line x1="1190" y1="550" x2="1205" y2="550" class="line line-live"/>
+    <line x1="1205" y1="550" x2="1220" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-732-2-6" x1="1205" y1="550" x2="1205" y2="570" class="line line-live"/> 
+    <line id="line-main-732-2-7" x1="1205" y1="611" x2="1205" y2="632" class="line line-live"/>
+    <line id="line-main-732-2-8" x1="1205" y1="673" x2="1205" y2="696" class="line line-live"/> 
+    <line id="line-main-732-2-9" x1="1205" y1="738" x2="1205" y2="800" class="line line-live"/>
+    <line id="line-main-732-2-10" x1="1150" y1="800" x2="1260" y2="800" class="line line-live"/> 
+    <g id="752F219" class="cb-live" transform="translate(1345,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F219</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="1340" y1="500" x2="1340" y2="550" class="line line-live"/>
+    <line x1="1370" y1="515" x2="1370" y2="550" class="line line-live"/> 
+    <line x1="1340" y1="550" x2="1355" y2="550" class="line line-live"/> 
+    <line x1="1355" y1="550" x2="1370" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-720-1" x1="1355" y1="550" x2="1355" y2="570" class="line line-live"/> 
+    <line id="line-main-720-2" x1="1355" y1="611" x2="1355" y2="632" class="line line-live"/>
+    <line id="line-main-720-3" x1="1355" y1="673" x2="1355" y2="696" class="line line-live"/> 
+    <line id="line-main-720-4" x1="1355" y1="738" x2="1355" y2="800" class="line line-live"/>
+    <line id="line-main-720-5" x1="1300" y1="800" x2="1410" y2="800" class="line line-live"/> 
+    <g id="752F225" class="cb-live" transform="translate(1475,570)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="50" y="25" class="label" style="pointer-events:none">752F225</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--단로기 -->
+    <line x1="1470" y1="500" x2="1470" y2="550" class="line line-live"/>
+    <line x1="1500" y1="515" x2="1500" y2="550" class="line line-live"/> 
+    <line x1="1470" y1="550" x2="1485" y2="550" class="line line-live"/> 
+    <line x1="1485" y1="550" x2="1500" y2="550" class="line line-live"/>
+  <!--선로-->
+    <line id="line-main-720-6" x1="1485" y1="550" x2="1485" y2="570" class="line line-live"/> 
+    <line id="line-main-720-7" x1="1485" y1="611" x2="1485" y2="632" class="line line-live"/> 
+    <line id="line-main-720-8" x1="1485" y1="673" x2="1485" y2="696" class="line line-live"/> 
+    <line id="line-main-720-9" x1="1485" y1="738" x2="1485" y2="800" class="line line-live"/> 
+    <line id="line-main-720-10" x1="1430" y1="800" x2="1540" y2="800" class="line line-live"/>
+  <!--BACK UP CB-->
+    <g id= "712HP301AB" class="cb-off" transform="translate(135,680)">
+    <rect x="-5" y="110" width="40" height="20" class="cb" />
+    <text x="20" y="150" class="label" style="pointer-events:none">712HP301AB</text>
+    <circle cx="5" cy="120" r="4" class="cb-body"/>
+    <circle cx="25" cy="120" r="4" class="cb-body"/>
+    </g>
+    <g id= "716HP301AB" class="cb-off" transform="translate(425,680)">
+    <rect x="-5" y="110" width="40" height="20" class="cb" />
+    <text x="20" y="150" class="label" style="pointer-events:none">716HP301AB</text>
+    <circle cx="5" cy="120" r="4" class="cb-body"/>
+    <circle cx="25" cy="120" r="4" class="cb-body"/>
+    </g>
+    <g id= "732HP302AB" class="cb-off" transform="translate(815,680)">
+    <rect x="-5" y="110" width="40" height="20" class="cb" />
+    <text x="20" y="150" class="label" style="pointer-events:none">732HP302AB</text>
+    <circle cx="5" cy="120" r="4" class="cb-body"/>
+    <circle cx="25" cy="120" r="4" class="cb-body"/>
+    </g>
+    <g id= "732HP301AB" class="cb-off" transform="translate(1115,680)">
+    <rect x="-5" y="110" width="40" height="20" class="cb" />
+    <text x="20" y="150" class="label" style="pointer-events:none">732HP301AB</text>
+    <circle cx="5" cy="120" r="4" class="cb-body"/>
+    <circle cx="25" cy="120" r="4" class="cb-body"/>
+    </g>
+    <g id= "720HP301AB" class="cb-off" transform="translate(1410,680)">
+    <rect x="-5" y="110" width="40" height="20" class="cb" />
+    <text x="20" y="150" class="label" style="pointer-events:none">720HP301AB</text>
+    <circle cx="5" cy="120" r="4" class="cb-body"/>
+    <circle cx="25" cy="120" r="4" class="cb-body"/>
+    </g>    
+<!--6.6KV CB -->
+    <g id="712HP301A" class="cb-live" transform="translate(75,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">712HP301A</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="712HP301B" class="cb-live" transform="translate(205,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">712HP301B</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g> 
+    <g id="716HP301A" class="cb-live" transform="translate(355,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">716HP301A</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="716HP301B" class="cb-live" transform="translate(505,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">716HP301B</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="732HP301A" class="cb-live" transform="translate(745,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">732HP301A</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="732HP301B" class="cb-live" transform="translate(895,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">732HP301B</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="732HP302A" class="cb-live" transform="translate(1045,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">732HP302A</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="732HP302B" class="cb-live" transform="translate(1195,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">732HP302B</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="720HP301A" class="cb-live" transform="translate(1345,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">720HP301A</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+    <g id="720HP301B" class="cb-live" transform="translate(1475,695)">
+    <rect x="0" y="0" width="20" height="40" class="cb" />
+    <text x="60" y="25" class="label" style="pointer-events:none">720HP301B</text>
+    <circle cx="10" cy="10" r="4" class="cb-body"/>
+    <circle cx="10" cy="30" r="4" class="cb-body"/>
+    </g>
+  <!--TR 변압기 -->
+    <a href="https://gscaltexcorp.sharepoint.com/:x:/s/O365M_G36000/IQD0m1bw5VgOS7ci7ksf5H6RAZ0r3EPu59Nw5Pm7XHMByhw?e=l6rM4L" target="_blank">
+    <g id="712TR201" class="tr-live" transform="translate(-65,645)" onclick="transformerClick('712TR201')">
+    <circle cx="150" cy="7" r="38" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none"> 712TR201 </text>
+    <rect id="step-712TR201-box-1" x="187" y="117" width="25" height="25" rx="4" class="step-box" fill="#ef4444" style="display:none"/>
+    <text id="step-712TR201-text-1" x="195" y="135" class="step-text" style="display:none"> 1 </text>
+    <rect id="step-712TR201-box-2" x="80" y="55" width="25" height="25" rx="4" class="step-box" fill="#38bdf8" style="display:none"/>
+    <text id="step-712TR201-text-2" x="88" y="72" class="step-text" style="display:none"> 2 </text>
+    <rect id="step-712TR201-box-3" x="217" y="117" width="25" height="25" rx="4" class="step-box" fill="yellow" style="display:none"/>
+    <text id="step-712TR201-text-3" x="225" y="135" class="step-text" style="display:none"> 3 </text>
+    <rect id="step-712TR201-box-4" x="110" y="-70" width="25" height="25" rx="4" class="step-box" fill="#38bdf8" style="display:none"/>
+    <text id="step-712TR201-text-4" x="118" y="-53" class="step-text" style="display:none"> 4 </text>
+    <rect id="step-712TR201-box-5" x="110" y="55" width="25" height="25" rx="4" class="step-box" fill="yellow" style="display:none"/>
+    <text id="step-712TR201-text-5" x="118" y="72" class="step-text" style="display:none"> 5 </text>
+    <rect id="step-712TR201-box-6" x="110" y="-5" width="25" height="25" rx="4" class="step-box" fill="white" style="display:none"/>
+    <text id="step-712TR201-text-6" x="118" y="12" class="step-text" style="display:none"> 6 </text>
+    <rect id="step-712TR201-box-51" x="150" y="-5" width="25" height="25" rx="4" class="step-box" fill="white" style="display:none"/>
+    <text id="step-712TR201-text-51" x="158" y="12" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="712TR202" class="tr-live" transform="translate(65,645)" onclick="transformerClick('712TR202')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none"> 712TR202 </text>
+    <rect id="step-712TR202-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-712TR202-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="716TR201" class="tr-live" transform="translate(215,645)" onclick="transformerClick('716TR201')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">716TR201</text>
+    <rect id="step-716TR201-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-716TR201-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="716TR202" class="tr-live" transform="translate(365,645)" onclick="transformerClick('716TR202')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">716TR202</text>
+    <rect id="step-716TR202-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-716TR202-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="732TR201" class="tr-live" transform="translate(605,645)" onclick="transformerClick('732TR201')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">732TR201</text>
+    <rect id="step-732TR201-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-732TR201-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="732TR202" class="tr-live" transform="translate(755,645)" onclick="transformerClick('732TR202')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">732TR202</text>
+    <rect id="step-732TR202-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-732TR202-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="732TR203" class="tr-live" transform="translate(905,645)" onclick="transformerClick('732TR203')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">732TR203</text>
+    <rect id="step-732TR203-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-732TR203-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="732TR204" class="tr-live" transform="translate(1055,645)" onclick="transformerClick('732TR204')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">732TR204</text>
+    <rect id="step-732TR204-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-732TR204-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="720TR201" class="tr-live" transform="translate(1205,645)" onclick="transformerClick('720TR201')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">720TR201</text>
+    <rect id="step-720TR201-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-720TR201-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+    <g id="720TR202" class="tr-live" transform="translate(1335,645)" onclick="transformerClick('720TR202')">
+    <circle cx="150" cy="7" r="35" fill="transparent" style="cursor:pointer"/>
+    <circle cx="150" cy="0" r="12" class="tr-body"/>
+    <circle cx="150" cy="15" r="12" class="tr-body"/>
+    <text x="200" y="12" class="label" style="pointer-events:none">720TR202</text>
+    <rect id="step-720TR202-box" x="120" y="-25" width="22" height="22" rx="4" class="step-box" style="display:none"/>
+    <text id="step-720TR202-text" x="131" y="-9" class="step-text" style="display:none"> 1 </text>
+    </g>
+
+  <!--생산팀 -->
+    <rect x="115" y="840" width="70" height="40" fill="transparent" onclick="showView('MFC')" />
+    <text x="150" y="875" class="label" style="pointer-events:none">
+    MFC생산팀
+    </text>
+    <rect x="405" y="840" width="70" height="40" fill="transparent" onclick="showView('MFC')" />
+    <text x="440" y="875" class="label" style="pointer-events:none">
+    PE생산팀
+    </text>
+    <rect x="795" y="840" width="70" height="40" fill="transparent" onclick="showView('PE')" />
+    <text x="830" y="875" class="label" style="pointer-events:none">
+    PE생산팀
+    </text>
+    <rect x="1095" y="840" width="70" height="40" fill="transparent" onclick="showView('PE')" />
+    <text x="1130" y="875" class="label" style="pointer-events:none">
+    PE생산팀
+    </text>
+    <rect x="1395" y="840" width="70" height="40" fill="transparent" onclick="showView('PE')" />
+    <text x="1430" y="875" class="label" style="pointer-events:none">
+    HOU제품운영팀
+    <tspan x="1430" dy="15">(720UNIT)</tspan>
+    </text>
+  </svg>`;
+}
+
+function s700공정() {
+  return `
+  <svg id="svg" viewBox="-30 -30 1630 930" preserveAspectRatio="xMidYMid meet">
+    <text id="coords" x="20" y="25" fill="yellow" font-size="14"></text>
+    <text x="700" y="40" class="label" style="font-size:20px"> PE/MFC생산팀 </text>
+    <text x="25" y="90" class="label" style="font-size:13px"> 22.9KV </text>
+    <text x="25" y="490" class="label" style="font-size:13px"> 6.6KV </text>
+// 22.9KV BUS
+    <line x1="50" y1="80" x2="600" y2="80" class="line" /> 
+    <line x1="50" y1="95" x2="600" y2="95" class="line" /> 
+    <line x1="670" y1="80" x2="1550" y2="80" class="line" /> 
+    <line x1="670" y1="95" x2="1550" y2="95" class="line" /> 
+//단로기
+    <line x1="70" y1="80" x2="70" y2="150" class="line" /> // 세로
+    <line x1="100" y1="95" x2="100" y2="150" class="line" /> // 세로
+    <line x1="70" y1="150" x2="100" y2="150" class="line" /> // 가로
+    <line x1="85" y1="150" x2="85" y2="300" class="line" /> // 세로
+    <line x1="85" y1="340" x2="85" y2="500" class="line" /> // 세로
+    <line x1="220" y1="80" x2="220" y2="150" class="line" />
+    <line x1="250" y1="95" x2="250" y2="150" class="line" />
+    <line x1="220" y1="150" x2="250" y2="150" class="line" />
+    <line x1="235" y1="150" x2="235" y2="300" class="line" />
+    <line x1="235" y1="340" x2="235" y2="500" class="line" />
+    <line x1="370" y1="80" x2="370" y2="150" class="line" />
+    <line x1="400" y1="95" x2="400" y2="150" class="line" />
+    <line x1="370" y1="150" x2="400" y2="150" class="line" /> 
+    <line x1="385" y1="150" x2="385" y2="300" class="line" />
+    <line x1="385" y1="340" x2="385" y2="500" class="line" />
+    <line x1="520" y1="80" x2="520" y2="150" class="line" /> 
+    <line x1="550" y1="95" x2="550" y2="150" class="line" />
+    <line x1="520" y1="150" x2="550" y2="150" class="line" /> 
+    <line x1="535" y1="150" x2="535" y2="300" class="line" /> 
+    <line x1="535" y1="340" x2="535" y2="500" class="line" /> 
+    <line x1="720" y1="80" x2="720" y2="150" class="line" />  
+    <line x1="750" y1="95" x2="750" y2="150" class="line" /> 
+    <line x1="720" y1="150" x2="750" y2="150" class="line" /> 
+    <line x1="735" y1="150" x2="735" y2="300" class="line" /> 
+    <line x1="735" y1="340" x2="735" y2="500" class="line" /> 
+    <line x1="870" y1="80" x2="870" y2="150" class="line" />
+    <line x1="900" y1="95" x2="900" y2="150" class="line" /> 
+    <line x1="870" y1="150" x2="900" y2="150" class="line" />
+    <line x1="885" y1="150" x2="885" y2="300" class="line" /> 
+    <line x1="885" y1="340" x2="885" y2="500" class="line" />
+    <line x1="1020" y1="80" x2="1020" y2="150" class="line" />
+    <line x1="1050" y1="95" x2="1050" y2="150" class="line" /> 
+    <line x1="1020" y1="150" x2="1050" y2="150" class="line" />
+    <line x1="1035" y1="150" x2="1035" y2="300" class="line" /> 
+    <line x1="1035" y1="340" x2="1035" y2="500" class="line" />
+    <line x1="1170" y1="80" x2="1170" y2="150" class="line" /> 
+    <line x1="1200" y1="95" x2="1200" y2="150" class="line" /> 
+    <line x1="1170" y1="150" x2="1200" y2="150" class="line" />
+    <line x1="1185" y1="150" x2="1185" y2="300" class="line" /> 
+    <line x1="1185" y1="340" x2="1185" y2="500" class="line" />
+    <line x1="1320" y1="80" x2="1320" y2="150" class="line" /> 
+    <line x1="1350" y1="95" x2="1350" y2="150" class="line" /> 
+    <line x1="1320" y1="150" x2="1350" y2="150" class="line" /> 
+    <line x1="1335" y1="150" x2="1335" y2="300" class="line" /> 
+    <line x1="1335" y1="340" x2="1335" y2="500" class="line" />
+    <line x1="1470" y1="80" x2="1470" y2="150" class="line" />
+    <line x1="1500" y1="95" x2="1500" y2="150" class="line" /> 
+    <line x1="1470" y1="150" x2="1500" y2="150" class="line" /> 
+    <line x1="1485" y1="150" x2="1485" y2="300" class="line" /> 
+    <line x1="1485" y1="340" x2="1485" y2="500" class="line" /> 
+    <line x1="1620" y1="80" x2="1620" y2="150" class="line" /> 
+    <line x1="1650" y1="95" x2="1650" y2="150" class="line" /> 
+    <line x1="1620" y1="150" x2="1650" y2="150" class="line" />
+    <line x1="1635" y1="150" x2="1635" y2="300" class="line" /> 
+    <line x1="1635" y1="340" x2="1635" y2="500" class="line" />
+// 6.6KV 가로 BUS
+    <line x1="30" y1="500" x2="140" y2="500" class="line" />
+    <line x1="180" y1="500" x2="290" y2="500" class="line" /> 
+    <line x1="330" y1="500" x2="440" y2="500" class="line" /> 
+    <line x1="480" y1="500" x2="590" y2="500" class="line" /> 
+    <line x1="680" y1="500" x2="790" y2="500" class="line" />
+    <line x1="830" y1="500" x2="940" y2="500" class="line" /> 
+    <line x1="980" y1="500" x2="1090" y2="500" class="line" /> 
+    <line x1="1130" y1="500" x2="1240" y2="500" class="line" /> 
+    <line x1="1280" y1="500" x2="1390" y2="500" class="line" /> 
+    <line x1="1430" y1="500" x2="1540" y2="500" class="line" />
+// 6.6KV 세로 BUS 712TR201
+    <line x1="55" y1="500" x2="55" y2="700" class="line" />
+    <line x1="85" y1="500" x2="85" y2="700" class="line" />
+    <line x1="115" y1="500" x2="115" y2="700" class="line" />
+// 6.6KV 세로 BUS 716TR201
+    <line x1="200" y1="500" x2="200" y2="700" class="line" />
+    <line x1="235" y1="500" x2="235" y2="700" class="line" />
+    <line x1="270" y1="500" x2="270" y2="700" class="line" />
+// 6.6KV 세로 BUS 712TR202
+    <line x1="350" y1="500" x2="350" y2="700" class="line" />
+    <line x1="385" y1="500" x2="385" y2="700" class="line" />
+    <line x1="420" y1="500" x2="420" y2="700" class="line" />
+// 6.6KV 세로 BUS 716TR202
+    <line x1="500" y1="500" x2="500" y2="700" class="line" />
+    <line x1="535" y1="500" x2="535" y2="700" class="line" />
+    <line x1="570" y1="500" x2="570" y2="700" class="line" />
+// 6.6KV 세로 BUS 732TR203
+    <line x1="700" y1="500" x2="700" y2="700" class="line" />
+    <line x1="735" y1="500" x2="735" y2="700" class="line" />
+    <line x1="770" y1="500" x2="770" y2="700" class="line" />
+// 6.6KV 세로 BUS 720TR201
+    <line x1="850" y1="500" x2="850" y2="700" class="line" />
+    <line x1="885" y1="500" x2="885" y2="700" class="line" />
+    <line x1="920" y1="500" x2="920" y2="700" class="line" />
+// 6.6KV 세로 BUS 732TR201
+    <line x1="1000" y1="500" x2="1000" y2="700" class="line" />
+    <line x1="1035" y1="500" x2="1035" y2="700" class="line" />
+    <line x1="1070" y1="500" x2="1070" y2="700" class="line" />
+// 6.6KV 세로 BUS 732TR204
+    <line x1="1150" y1="500" x2="1150" y2="700" class="line" />
+    <line x1="1185" y1="500" x2="1185" y2="700" class="line" />
+    <line x1="1220" y1="500" x2="1220" y2="700" class="line" />
+// 6.6KV 세로 BUS 732TR202
+    <line x1="1300" y1="500" x2="1300" y2="700" class="line" />
+    <line x1="1335" y1="500" x2="1335" y2="700" class="line" />
+    <line x1="1370" y1="500" x2="1370" y2="700" class="line" />
+// 6.6KV 세로 BUS 720TR202
+    <line x1="1450" y1="500" x2="1450" y2="700" class="line" />
+    <line x1="1485" y1="500" x2="1485" y2="700" class="line" />
+    <line x1="1520" y1="500" x2="1520" y2="700" class="line" />
+
+// 22.P KV CB 배치
+<g id="752F212" transform="translate(70,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F212</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F213" transform="translate(220,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F213</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F215" transform="translate(370,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F215</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F216" transform="translate(520,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F216</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F218" transform="translate(720,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F218</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F219" transform="translate(870,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F219</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F220" transform="translate(1020,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F220</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F222" transform="translate(1170,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F222</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F224" transform="translate(1320,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F224</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F225" transform="translate(1470,200)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F225</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+
+// 6.6 KV CB 배치
+<g id="712HP301A" transform="translate(70,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">712HP301A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="716HP301A" transform="translate(220,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">716HP301A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="712HP301B" transform="translate(370,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">712HP301B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="716HP301B" transform="translate(520,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">716HP301B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP302A" transform="translate(720,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP302A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="720HP301A" transform="translate(870,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">720HP301A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP301A" transform="translate(1020,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP301A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP302B" transform="translate(1170,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP302B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP301B" transform="translate(1320,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP301B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="720HP301B" transform="translate(1470,400)" style="cursor:pointer">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">720HP301B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+
+//TR 배치
+<g id="712TR201" transform="translate(-65,310)">
+  <circle cx="150" cy="0" r="15" fill="none" class="tr-body"/>
+  <circle cx="150" cy="20" r="15" fill="none" class="tr-body"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">712TR201</text>
+  </g>
+  <g id="716TR201" transform="translate(85,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">716TR201</text>
+  </g>
+  <g id="TR_1" transform="translate(235,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">712TR202</text>
+  </g>
+  <g id="TR_1" transform="translate(385,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR203</text>
+  </g>
+    <g id="TR_1" transform="translate(585,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">720TR201</text>
+  </g>
+    <g id="TR_1" transform="translate(735,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR201</text>
+  </g>
+    <g id="TR_1" transform="translate(885,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR201</text>
+  </g>
+    <g id="TR_1" transform="translate(1035,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR204</text>
+  </g>
+    <g id="TR_1" transform="translate(1185,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR202</text>
+  </g>
+    <g id="TR_1" transform="translate(1335,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">720TR202</text>
+  </g>
+
+
+//버튼 클릭 생산팀 배치
+  <rect x="50" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('MFC')" />
+    <text x="85" y="755" class="label" style="pointer-events:none">
+  MFC생산팀
+    </text>
+  <rect x="200" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="235" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="350" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('MFC')" />
+    <text x="385" y="755" class="label" style="pointer-events:none">
+  MFC생산팀
+    </text>
+  <rect x="500" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="535" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+
+  <rect x="700" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="735" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="850" y="750" width="70" height="40"
+      fill="transparent"
+      onclick="showView('OFFSITE')" />
+    <text x="895" y="755" class="label" style="pointer-events:none">
+  HOU제품운영팀
+  <tspan x="895" dy="15">(720UNIT)</tspan>
+    </text>
+
+  <rect x="1000" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1035" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1000" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1035" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1150" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1185" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1300" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1335" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1450" y="750" width="70" height="40"
+      fill="transparent"
+      onclick="showView('OFFSITE')" />
+    <text x="1495" y="755" class="label" style="pointer-events:none">
+  HOU제품운영팀
+    <tspan x="1495" dy="15">(720UNIT)</tspan>
+    </text>
+    
+  </svg>`;
+}
+function shome() {
+  return `
+  <svg id="svg" viewBox="-30 -30 1630 930" preserveAspectRatio="xMidYMid meet">
+    <text id="coords" x="20" y="25" fill="yellow" font-size="14"></text>
+    <text x="700" y="40" class="label" style="font-size:20px">2공장 전력계통</text>
+//154 TL LINE
+    <line x1="850" y1="55" x2="850" y2="130" class="line" />
+    <line x1="1250" y1="55" x2="1250" y2="130" class="line" /> 
+    <line x1="820" y1="130" x2="880" y2="130" class="line" />
+    <line x1="1220" y1="130" x2="1280" y2="130" class="line" />
+    <line x1="820" y1="130" x2="820" y2="160" class="line" /> 
+    <line x1="880" y1="130" x2="880" y2="175" class="line" />
+    <line x1="1220" y1="130" x2="1220" y2="160" class="line" />
+    <line x1="1280" y1="130" x2="1280" y2="175" class="line" /> 
+
+    <line x1="535" y1="30" x2="535" y2="175" class="line" /> 
+    <line x1="550" y1="15" x2="550" y2="160" class="line" />
+    <line x1="50" y1="15" x2="550" y2="15" class="line" /> 
+    <line x1="50" y1="30" x2="535" y2="30" class="line" /> 
+    <line x1="50" y1="160" x2="510" y2="160" class="line" /> 
+    <line x1="50" y1="175" x2="510" y2="175" class="line" /> 
+    <line x1="550" y1="160" x2="1500" y2="160" class="line" /> 
+    <line x1="535" y1="175" x2="1500" y2="175" class="line" />
+
+    <line x1="50" y1="500" x2="1500" y2="500" class="line" /> 
+    <line x1="50" y1="515" x2="1500" y2="510" class="line" /> 
+    <rect x="800" y="25" width="100" height="30" class="bus" />
+    <text x="850" y="45" class="label">154kV TL</text>
+    <rect x="1200" y="25" width="100" height="30" class="bus" />
+    <text x="1250" y="45" class="label">154kV TL</text>
+
+// 154 KV CB 배치
+<g id="752F212" transform="translate(70,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F212</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F213" transform="translate(200,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F213</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F215" transform="translate(330,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F215</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F216" transform="translate(460,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F216</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F218" transform="translate(660,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F218</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F219" transform="translate(800,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F219</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F220" transform="translate(940,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F220</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F222" transform="translate(1080,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F222</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F224" transform="translate(1220,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F224</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="752F225" transform="translate(1360,200)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="50" y="25" class="label" style="pointer-events:none">752F225</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+
+// 22.9 KV CB 배치
+<g id="712HP301A1" class="cb-live" transform="translate(70,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">712HP301A1</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="716HP301A" transform="translate(200,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">716HP301A</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="712HP301B" transform="translate(330,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">712HP301B</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="716HP301B" transform="translate(460,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">716HP301B</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="732HP302A" transform="translate(660,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">732HP302A</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="720HP301A" transform="translate(800,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">720HP301A</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="732HP301A" transform="translate(940,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">732HP301A</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="732HP302B" transform="translate(1080,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">732HP302B</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="732HP301B" transform="translate(1220,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">732HP301B</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+<g id="720HP301B" transform="translate(1360,400)" style="cursor:pointer">
+<rect x="0" y="0" width="20" height="40" class="cb" />
+<text x="60" y="25" class="label" style="pointer-events:none">720HP301B</text>
+<circle cx="10" cy="10" r="4" class="cb-body"/>
+<circle cx="10" cy="30" r="4" class="cb-body"/>
+</g>
+
+//TR 배치
+<g id="712TR201" transform="translate(-70,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">712TR201</text>
+  </g>
+  <g id="716TR201" transform="translate(60,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">716TR201</text>
+  </g>
+  <g id="712TR202" transform="translate(190,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">712TR202</text>
+  </g>
+  <g id="732TR203" transform="translate(320,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">732TR203</text>
+  </g>
+    <g id="720TR201" transform="translate(520,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">720TR201</text>
+  </g>
+    <g id="732TR201" transform="translate(660,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">732TR201</text>
+  </g>
+    <g id="732TR201" transform="translate(800,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">732TR201</text>
+  </g>
+    <g id="732TR204" transform="translate(940,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">732TR204</text>
+  </g>
+    <g id="732TR202" transform="translate(1080,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">732TR202</text>
+  </g>
+    <g id="720TR202" transform="translate(1220,310)">
+  <circle cx="150" cy="0" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="15" r="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="200" y="12" class="label" style="pointer-events:none">720TR202</text>
+  </g>
+
+//버튼 클릭 생산팀 배치
+  <rect x="50" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('MFC')" />
+    <text x="85" y="755" class="label" style="pointer-events:none">
+  MFC생산팀
+    </text>
+  <rect x="200" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="235" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="350" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('MFC')" />
+    <text x="385" y="755" class="label" style="pointer-events:none">
+  MFC생산팀
+    </text>
+  <rect x="500" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="535" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="700" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="735" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="850" y="750" width="70" height="40"
+      fill="transparent"
+      onclick="showView('OFFSITE')" />
+    <text x="895" y="755" class="label" style="pointer-events:none">
+  HOU제품운영팀
+  <tspan x="895" dy="15">(720UNIT)</tspan>
+    </text>
+  <rect x="1000" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1035" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="1000" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1035" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="1150" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1185" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="1300" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1335" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="1450" y="750" width="70" height="40"
+      fill="transparent"
+      onclick="showView('OFFSITE')" />
+    <text x="1495" y="755" class="label" style="pointer-events:none">
+  HOU제품운영팀
+    <tspan x="1495" dy="15">(720UNIT)</tspan>
+    </text>
+
+  </svg>`;
+}
+function s154() {
+  return `
+  <svg id="svg" viewBox="-30 -30 1630 930" preserveAspectRatio="xMidYMid meet">
+    <text id="coords" x="20" y="25" fill="yellow" font-size="14"></text>
+    <text x="700" y="40" class="label" style="font-size:20px">VDU 154KV</text>
+    <line x1="500" y1="55" x2="500" y2="130" class="line" />  // 154 Left TL line
+    <line x1="1000" y1="55" x2="1000" y2="130" class="line" /> // 154 Right TL line
+
+    <line x1="470" y1="130" x2="530" y2="130" class="line" /> // 단로기 가로 line
+    <line x1="970" y1="130" x2="1030" y2="130" class="line" /> // 단로기 가로 line
+
+    <line x1="470" y1="130" x2="470" y2="160" class="line" />  // 단로기 line
+    <line x1="530" y1="130" x2="530" y2="175" class="line" /> // 단로기 line
+    <line x1="970" y1="130" x2="970" y2="160" class="line" />  // 단로기 line
+    <line x1="1030" y1="130" x2="1030" y2="175" class="line" /> // 단로기 line
+
+    //PE 154KV
+    <line x1="90" y1="205" x2="150" y2="205" class="line" /> // 단로기 가로 line
+    <line x1="90" y1="160" x2="90" y2="205" class="line" />  // 단로기 line
+    <line x1="150" y1="175" x2="150" y2="205" class="line" />  // 단로기 line
+    <line x1="120" y1="205" x2="120" y2="235" class="line" /> // 단로기 line
+
+    <line x1="50" y1="160" x2="1500" y2="160" class="line" /> // Top horizontal line
+    <line x1="50" y1="175" x2="1500" y2="175" class="line" /> // Bottom horizontal line
+    <line x1="50" y1="500" x2="1500" y2="500" class="line" /> // Top horizontal line 66kV
+    <line x1="50" y1="515" x2="1500" y2="510" class="line" /> // Bottom horizontal line 66kV
+    <rect x="450" y="25" width="100" height="30" class="bus" />
+    <text x="500" y="45" class="label">154kV TL</text>
+    <rect x="950" y="25" width="100" height="30" class="bus" />
+    <text x="1000" y="45" class="label">154kV TL</text>
+
+// 버튼 클릭 투명
+    <rect x="85" y="230" width="70" height="40"
+    fill="transparent"
+    onclick="showView('PE154')" />
+    <text x="120" y="255" class="label" style="pointer-events:none">
+    PE 154KV
+    </text>
+
+//버튼 클릭
+// 22.P KV CB 배치
+<g id="752F218" transform="translate(720,200)" style="cursor:pointer" onclick="openPopup('752F218', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F218</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F219" transform="translate(870,200)" style="cursor:pointer" onclick="openPopup('752F219', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F219</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F220" transform="translate(1020,200)" style="cursor:pointer" onclick="openPopup('752F220', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F220</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F222" transform="translate(1170,200)" style="cursor:pointer" onclick="openPopup('752F222', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F222</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F224" transform="translate(1320,200)" style="cursor:pointer" onclick="openPopup('752F224', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F224</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="752F225" transform="translate(1470,200)" style="cursor:pointer" onclick="openPopup('752F225', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="60" y="30" class="label" style="pointer-events:none">752F225</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+
+// 6.6 KV CB 배치
+<g id="732HP302A" transform="translate(720,400)" style="cursor:pointer" onclick="openPopup('732HP302A', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP302A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="720HP301A" transform="translate(870,400)" style="cursor:pointer" onclick="openPopup('720HP301A', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">720HP301A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP301A" transform="translate(1020,400)" style="cursor:pointer" onclick="openPopup('732HP301A', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP301A</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP302B" transform="translate(1170,400)" style="cursor:pointer" onclick="openPopup('732HP302B', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP302B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="732HP301B" transform="translate(1320,400)" style="cursor:pointer" onclick="openPopup('732HP301B', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">732HP301B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+<g id="720HP301B" transform="translate(1470,400)" style="cursor:pointer" onclick="openPopup('720HP301B', 'cb1.txt')">
+<rect x="0" y="0" width="30" height="50" class="cb" />
+<text x="70" y="30" class="label" style="pointer-events:none">720HP301B</text>
+<circle cx="15" cy="13" r="5" class="cb-body"/>
+<circle cx="15" cy="37" r="5" class="cb-body"/>
+</g>
+
+//TR 배치
+    <g id="720TR201" transform="translate(585,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">720TR201</text>
+  </g>
+    <g id="732TR201" transform="translate(735,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR201</text>
+  </g>
+    <g id="732TR202" transform="translate(885,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR202</text>
+  </g>
+    <g id="732TR204" transform="translate(1035,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">732TR204</text>
+  </g>
+    <g id="720TR202" transform="translate(1185,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">720TR202</text>
+  </g>
+    <g id="720TR203" transform="translate(1335,310)">
+  <circle cx="150" cy="0" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="150" cy="20" r="15" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="210" y="12" class="label" style="pointer-events:none">720TR203</text>
+  </g>
+
+
+//버튼 클릭 생산팀 배치
+  <rect x="50" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('MFC')" />
+    <text x="85" y="755" class="label" style="pointer-events:none">
+  MFC생산팀
+    </text>
+  <rect x="200" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="235" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+  <rect x="350" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('MFC')" />
+    <text x="385" y="755" class="label" style="pointer-events:none">
+  MFC생산팀
+    </text>
+  <rect x="500" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="535" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="700" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="735" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="850" y="750" width="70" height="40"
+      fill="transparent"
+      onclick="showView('OFFSITE')" />
+    <text x="895" y="755" class="label" style="pointer-events:none">
+  HOU제품운영팀
+  <tspan x="895" dy="15">(720UNIT)</tspan>
+    </text>
+
+  <rect x="1000" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1035" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1000" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1035" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1150" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1185" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1300" y="720" width="70" height="40"
+      fill="transparent"
+      onclick="showView('PE')" />
+    <text x="1335" y="755" class="label" style="pointer-events:none">
+  PE생산팀
+    </text>
+
+  <rect x="1450" y="750" width="70" height="40"
+      fill="transparent"
+      onclick="showView('OFFSITE')" />
+    <text x="1495" y="755" class="label" style="pointer-events:none">
+  HOU제품운영팀
+    <tspan x="1495" dy="15">(720UNIT)</tspan>
+    </text>
+    
+  </svg>`;
+}
+</script>
